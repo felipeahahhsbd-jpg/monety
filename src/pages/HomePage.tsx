@@ -11,11 +11,10 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Só tenta buscar stats se o token existir
     if (token) {
       fetchStats();
     }
-  }, [token]); // Monitora o token
+  }, [token]);
 
   const fetchStats = async () => {
     try {
@@ -23,7 +22,6 @@ export default function HomePage() {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
-      // Verifica se o retorno é JSON para evitar erro de parse
       const contentType = response.headers.get("content-type");
       if (response.ok && contentType?.includes("application/json")) {
         const data = await response.json();
@@ -36,15 +34,20 @@ export default function HomePage() {
     }
   };
 
-  const getUserInitial = () => {
-    return user?.email?.charAt(0).toUpperCase() || 'M';
-  };
+  const getUserInitial = () => user?.email?.charAt(0).toUpperCase() || 'M';
 
-  if (!user) return null;
+  // Fallback para evitar tela preta caso o componente renderize antes do user estar pronto
+  if (loading && !user) {
+    return (
+      <div className="flex justify-center items-center h-[60vh]">
+        <Loader2 className="w-8 h-8 text-[#22c55e] animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-6 animate-fade-in">
-      <div className="flex items-center justify-between animate-slide-down">
+      <div className="flex items-center justify-between">
         <div>
           <p className="text-gray-400 text-sm">Bem-vindo de volta</p>
           <h1 className="text-xl font-bold text-white">
@@ -57,12 +60,10 @@ export default function HomePage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <Card className="bg-[#111111]/80 backdrop-blur-sm border-[#1a1a1a] animate-fade-in">
+        <Card className="bg-[#111111]/80 border-[#1a1a1a]">
           <CardContent className="pt-4">
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 bg-[#22c55e]/20 rounded-lg flex items-center justify-center">
-                <TrendingUp className="w-4 h-4 text-[#22c55e]" />
-              </div>
+              <TrendingUp className="w-4 h-4 text-[#22c55e]" />
               <span className="text-gray-400 text-sm">Ganhos Hoje</span>
             </div>
             <p className="text-2xl font-bold text-[#22c55e]">
@@ -71,12 +72,10 @@ export default function HomePage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-[#111111]/80 backdrop-blur-sm border-[#1a1a1a] animate-fade-in">
+        <Card className="bg-[#111111]/80 border-[#1a1a1a]">
           <CardContent className="pt-4">
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 bg-[#22c55e]/20 rounded-lg flex items-center justify-center">
-                <Users className="w-4 h-4 text-[#22c55e]" />
-              </div>
+              <Users className="w-4 h-4 text-[#22c55e]" />
               <span className="text-gray-400 text-sm">Convidados</span>
             </div>
             <p className="text-2xl font-bold text-[#22c55e]">{stats.newInvites}</p>
@@ -84,7 +83,7 @@ export default function HomePage() {
         </Card>
       </div>
 
-      <Card className="bg-[#111111]/80 backdrop-blur-sm border-[#22c55e]/30 animate-fade-in">
+      <Card className="bg-[#111111]/80 border-[#22c55e]/30">
         <CardContent className="pt-5 pb-5">
           <div className="flex items-center gap-2 mb-2">
             <Wallet className="w-5 h-5 text-[#22c55e]" />
@@ -104,16 +103,14 @@ export default function HomePage() {
         </CardContent>
       </Card>
 
-      <Card className="bg-[#111111]/80 backdrop-blur-sm border-[#1a1a1a] animate-fade-in">
+      <Card className="bg-[#111111]/80 border-[#1a1a1a]">
         <CardContent className="pt-6">
           <h3 className="text-white font-bold mb-4">Login Diário</h3>
           <CheckIn onCheckInComplete={fetchStats} />
         </CardContent>
       </Card>
 
-      <div className="animate-fade-in">
-        <Roulette onSpinComplete={fetchStats} />
-      </div>
+      <Roulette onSpinComplete={fetchStats} />
     </div>
   );
 }
