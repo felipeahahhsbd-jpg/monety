@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Eye, EyeOff, Mail, Lock, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -9,6 +10,7 @@ interface LoginPageProps {
 
 export default function LoginPage({ onSwitchToRegister }: LoginPageProps) {
   const { login } = useAuth();
+  const navigate = useNavigate(); // Hook de navegação
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -22,6 +24,10 @@ export default function LoginPage({ onSwitchToRegister }: LoginPageProps) {
 
     try {
       await login(email, password);
+      
+      // Redirecionamento após sucesso
+      navigate('/home');
+
       toast.success('🎉 Bem-vindo ao Monety!', {
         description: 'Login realizado com sucesso',
         duration: 3000
