@@ -14,7 +14,7 @@ export default function HomePage() {
     if (token) {
       fetchStats();
     } else {
-      setLoadingStats(false);
+      setLoadingStats(false); // Se não tem token, para de carregar
     }
   }, [token]);
 
@@ -23,6 +23,7 @@ export default function HomePage() {
       const response = await fetch('/api/stats/today', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      
       const contentType = response.headers.get("content-type");
       if (response.ok && contentType?.includes("application/json")) {
         const data = await response.json();
@@ -39,12 +40,11 @@ export default function HomePage() {
     return user?.email?.charAt(0).toUpperCase() || 'M';
   };
 
-  // CORREÇÃO: Em vez de retornar null (tela preta), mostramos um loading
+  // CORREÇÃO AQUI: Em vez de retornar null, mostra um loading
   if (!user) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh] animate-fade-in">
-        <Loader2 className="w-10 h-10 text-[#22c55e] animate-spin mb-4" />
-        <p className="text-gray-400">Carregando informações...</p>
+      <div className="flex items-center justify-center h-[50vh]">
+        <Loader2 className="w-8 h-8 text-[#22c55e] animate-spin" />
       </div>
     );
   }
@@ -55,7 +55,7 @@ export default function HomePage() {
         <div>
           <p className="text-gray-400 text-sm">Bem-vindo de volta</p>
           <h1 className="text-xl font-bold text-white">
-            {user?.email?.split('@')[0] || 'Investidor'}
+            {user?.email?.split('@')[0] || 'Usuário'}
           </h1>
         </div>
         <div className="w-12 h-12 bg-gradient-to-br from-[#22c55e] to-[#16a34a] rounded-full flex items-center justify-center shadow-lg shadow-[#22c55e]/30">
@@ -64,6 +64,7 @@ export default function HomePage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
+        {/* Card Ganhos Hoje */}
         <Card className="bg-[#111111]/80 backdrop-blur-sm border-[#1a1a1a] animate-fade-in">
           <CardContent className="pt-4">
             <div className="flex items-center gap-2 mb-2">
@@ -78,6 +79,7 @@ export default function HomePage() {
           </CardContent>
         </Card>
 
+        {/* Card Convidados */}
         <Card className="bg-[#111111]/80 backdrop-blur-sm border-[#1a1a1a] animate-fade-in">
           <CardContent className="pt-4">
             <div className="flex items-center gap-2 mb-2">
@@ -91,6 +93,7 @@ export default function HomePage() {
         </Card>
       </div>
 
+      {/* Card Saldo Principal */}
       <Card className="bg-[#111111]/80 backdrop-blur-sm border-[#22c55e]/30 animate-fade-in">
         <CardContent className="pt-5 pb-5">
           <div className="flex items-center gap-2 mb-2">
