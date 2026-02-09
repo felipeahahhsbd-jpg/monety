@@ -1,4 +1,3 @@
-// App.tsx
 import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginPage from './pages/LoginPage';
@@ -11,23 +10,24 @@ import { Home, ShoppingBag, Users, User, Loader2 } from 'lucide-react';
 import { Toaster } from 'sonner';
 
 function AppContent() {
-  // Adicione 'loading' e 'token' aqui para maior controle
+  // Pegamos o loading do contexto para evitar telas em branco
   const { user, token, logout, loading } = useAuth() as any; 
   const [currentPage, setCurrentPage] = useState<'home' | 'products' | 'team' | 'profile'>('home');
   const [showAuth, setShowAuth] = useState<'login' | 'register'>('login');
 
-  // Se o contexto estiver verificando o login no início, mostre um loading
+  // 1. TELA DE CARREGAMENTO GLOBAL
+  // Se o sistema ainda está verificando quem é o usuário, mostramos isso:
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center">
         <Loader2 className="w-10 h-10 text-[#22c55e] animate-spin mb-4" />
-        <p className="text-gray-400 animate-pulse">Carregando Monety...</p>
+        <p className="text-gray-400 animate-pulse text-sm">Carregando Monety...</p>
       </div>
     );
   }
 
-  // Se não tiver usuário NEM token, mostra Login/Registro
-  // Verificamos o token também porque ele costuma ser preenchido antes do perfil completo
+  // 2. SISTEMA DE PROTEÇÃO
+  // Se não tem usuário e nem token salvo, manda pro Login
   if (!user && !token) {
     return (
       <>
@@ -40,8 +40,10 @@ function AppContent() {
     );
   }
 
+  // 3. APLICAÇÃO PRINCIPAL
   return (
     <div className="min-h-screen bg-[#0a0a0a] pb-24 animate-fade-in">
+      {/* Header Fixo */}
       <header className="bg-[#111111] border-b border-[#1a1a1a] sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -50,15 +52,17 @@ function AppContent() {
             </div>
             <span className="text-2xl font-bold text-white">Monety</span>
           </div>
+
           <button
             onClick={logout}
-            className="text-gray-300 hover:text-white px-4 py-2 rounded-lg hover:bg-red-500/20 transition-colors text-sm font-medium"
+            className="text-gray-300 hover:text-white px-4 py-2 rounded-lg hover:bg-red-500/10 transition-colors text-sm font-medium"
           >
             Sair
           </button>
         </div>
       </header>
 
+      {/* Conteúdo das Páginas */}
       <main className="max-w-7xl mx-auto px-4 py-6">
         {currentPage === 'home' && <HomePage />}
         {currentPage === 'products' && <ProductsPage />}
@@ -66,13 +70,34 @@ function AppContent() {
         {currentPage === 'profile' && <ProfilePage />}
       </main>
 
+      {/* Barra de Navegação Inferior */}
       <nav className="fixed bottom-0 left-0 right-0 bg-[#111111]/95 backdrop-blur-md border-t border-[#1a1a1a] z-50">
         <div className="max-w-7xl mx-auto px-2">
           <div className="grid grid-cols-4 gap-1">
-            <NavButton icon={<Home />} label="Início" active={currentPage === 'home'} onClick={() => setCurrentPage('home')} />
-            <NavButton icon={<ShoppingBag />} label="Produtos" active={currentPage === 'products'} onClick={() => setCurrentPage('products')} />
-            <NavButton icon={<Users />} label="Equipe" active={currentPage === 'team'} onClick={() => setCurrentPage('team')} />
-            <NavButton icon={<User />} label="Perfil" active={currentPage === 'profile'} onClick={() => setCurrentPage('profile')} />
+            <NavButton 
+              icon={<Home />} 
+              label="Início" 
+              active={currentPage === 'home'} 
+              onClick={() => setCurrentPage('home')} 
+            />
+            <NavButton 
+              icon={<ShoppingBag />} 
+              label="Produtos" 
+              active={currentPage === 'products'} 
+              onClick={() => setCurrentPage('products')} 
+            />
+            <NavButton 
+              icon={<Users />} 
+              label="Equipe" 
+              active={currentPage === 'team'} 
+              onClick={() => setCurrentPage('team')} 
+            />
+            <NavButton 
+              icon={<User />} 
+              label="Perfil" 
+              active={currentPage === 'profile'} 
+              onClick={() => setCurrentPage('profile')} 
+            />
           </div>
         </div>
       </nav>
@@ -80,29 +105,34 @@ function AppContent() {
   );
 }
 
-// Sub-componente para limpar o código do AppContent
+// Componente auxiliar para os botões (deixa o código mais limpo)
 function NavButton({ icon, label, active, onClick }: any) {
   return (
     <button
       onClick={onClick}
       className={`flex flex-col items-center justify-center py-3 rounded-lg transition-all ${
-        active ? 'text-[#22c55e]' : 'text-gray-400 hover:text-white'
+        active 
+          ? 'text-[#22c55e] relative' 
+          : 'text-gray-400 hover:text-white'
       }`}
     >
-      {active && <div className="absolute w-8 h-8 bg-[#22c55e]/10 rounded-full -z-10" />}
-      {cloneElement(icon, { className: "w-6 h-6 mb-1" })}
-      <span className="text-[10px] font-medium uppercase tracking-wider">{label}</span>
+      {/* Efeito de brilho no botão ativo */}
+      {active && (
+        <div className="absolute top-1 w-8 h-1 bg-[#22c55e] rounded-full shadow-[0_0_10px_#22c55e]" />
+      )}
+      <div className={`mb-1 ${active ? 'transform -translate-y-1' : ''} transition-transform`}>
+        {icon}
+      </div>
+      <span className="text-[10px] font-bold uppercase tracking-wider">{label}</span>
     </button>
   );
 }
-
-import { cloneElement } from 'react';
 
 export default function App() {
   return (
     <AuthProvider>
       <AppContent />
-      <Toaster position="top-center" richColors />
+      <Toaster position="top-center" richColors theme="dark" />
     </AuthProvider>
   );
 }
