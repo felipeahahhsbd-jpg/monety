@@ -15,34 +15,46 @@ export default function LoginPage({ onSwitchToRegister }: LoginPageProps) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+// LoginPage.tsx
+// ... (mantenha os imports iguais)
+
+export default function LoginPage({ onSwitchToRegister }: LoginPageProps) {
+  const { login } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      await login(email, password);
+      await login(email, password); //
       
       toast.success('🎉 Bem-vindo ao Monety!', {
-        description: 'Login realizado com sucesso',
+        description: 'Redirecionando...',
         duration: 2000
       });
 
-      // CORREÇÃO AQUI:
-      // Aguarda 1.5s para o usuário ver a mensagem e força o recarregamento
-      // para garantir que o App.tsx pegue o novo estado do usuário.
+      // GARANTIA DE REDIRECIONAMENTO:
+      // Se em 1.5s o App.tsx não detectar a mudança sozinho, 
+      // o window.location.reload() forçará o App a ler o novo token do localStorage
       setTimeout(() => {
-        window.location.reload();
+        window.location.reload(); 
       }, 1500);
 
     } catch (err: any) {
-      const errorMsg = err.message || 'Erro ao fazer login';
+      const errorMsg = err.message || 'E-mail ou senha incorretos';
       setError(errorMsg);
       toast.error('Erro ao entrar', { description: errorMsg });
-      setLoading(false); // Só para o loading se der erro
+      setLoading(false); // Só desativa o loading se der erro para evitar múltiplos cliques
     }
   };
 
+  // ... resto do seu JSX (o design que você já tem está correto)
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#0f0f0f] to-[#0a0a0a] flex items-center justify-center p-4">
       <div className="w-full max-w-md animate-fade-in">
