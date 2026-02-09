@@ -49,6 +49,8 @@ const getIcon = (iconName: string, className: string) => {
   return icons[iconName] || <Pickaxe className={className} />;
 };
 
+// ... (mantenha os imports e interfaces iguais)
+
 export default function ProductsPage() {
   const { user, token, refreshUser } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
@@ -57,16 +59,21 @@ export default function ProductsPage() {
   const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
-    fetchProducts();
-    fetchInvestments();
-  }, []);
+    if (token) {
+      fetchProducts();
+      fetchInvestments();
+    }
+  }, [token]);
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch('/api/products');
+      // CORREÇÃO: Adicionado Header de Autorização
+      const response = await fetch('/api/products', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
       if (response.ok) {
         const data = await response.json();
-        // Mapear produtos com tiers e ícones
         const productsWithTiers = data.map((p: any, idx: number) => ({
           ...p,
           tier: ['bronze', 'silver', 'gold', 'platinum', 'diamond', 'emerald', 'elite'][idx] || 'bronze',
