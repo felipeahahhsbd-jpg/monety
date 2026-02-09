@@ -3,37 +3,64 @@ import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent } from '../components/ui/card';
 import CheckIn from '../components/CheckIn';
 import Roulette from '../components/Roulette';
-import { TrendingUp, Users, Wallet } from 'lucide-react';
+import { TrendingUp, Users, Wallet, Loader2 } from 'lucide-react';
 
 export default function HomePage() {
-  const { user, token } = useAuth();
+  const { user, token } = useAuth(); // Assume que useAuth também poderia retornar um 'isLoading' global
+  // Inicializa com valores zerados seguros
   const [stats, setStats] = useState({ todayEarnings: 0, newInvites: 0 });
-  const [loading, setLoading] = useState(true);
+  // Loading local para o fetch da API
+  const [loadingStats, setLoadingStats] = useState(false);
 
   useEffect(() => {
-    fetchStats();
-  }, []);
+    // Só chama a API se o token existir
+    if (token) {
+      fetchStats();
+    }
+  }, [token]); // <--- CRUCIAL: Re-executa quando o token for gerado
 
   const fetchStats = async () => {
+    if (!token) return;
+    
+    setLoadingStats(true);
     try {
       const response = await fetch('/api/stats/today', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
-      if (response.ok) {
+      // Verifica se a resposta é JSON válido antes de tentar parsear
+      const contentType = response.headers.get("content-type");
+      if (response.ok && contentType && contentType.includes("application/json")) {
         const data = await response.json();
         setStats(data);
+      } else {
+        console.warn("API retornou erro ou não é JSON:", response.status);
+        // Opcional: Tratar erros 401 (token expirado) aqui
       }
     } catch (err) {
       console.error('Error fetching stats:', err);
+      // Fallback silencioso: mantém os dados zerados, não quebra a tela
     } finally {
-      setLoading(false);
+      setLoadingStats(false);
     }
   };
 
   const getUserInitial = () => {
     return user?.email?.charAt(0).toUpperCase() || 'M';
   };
+
+  // Previne erros de cálculo se os dados do usuário ainda não carregaram
+  const userBalance = Number(user?.balance || 0);
+  const userTotalEarned = Number(user?.totalEarned || 0);
+
+  // Se o usuário ainda não carregou do Firebase, mostra loading simples
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#0a0a0a]">
+         <Loader2 className="w-8 h-8 text-[#22c55e] animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-6 animate-fade-in">
@@ -61,7 +88,11 @@ export default function HomePage() {
               <span className="text-gray-400 text-sm">Ganhos Hoje</span>
             </div>
             <p className="text-2xl font-bold text-[#22c55e]">
-              R$ {stats.todayEarnings.toFixed(2)}
+              {loadingStats ? (
+                <span className="text-sm text-gray-500">...</span>
+              ) : (
+                `R$ ${stats.todayEarnings.toFixed(2)}`
+              )}
             </p>
           </CardContent>
         </Card>
@@ -74,7 +105,9 @@ export default function HomePage() {
               </div>
               <span className="text-gray-400 text-sm">Convidados</span>
             </div>
-            <p className="text-2xl font-bold text-[#22c55e]">{stats.newInvites}</p>
+            <p className="text-2xl font-bold text-[#22c55e]">
+               {loadingStats ? "..." : stats.newInvites}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -87,13 +120,13 @@ export default function HomePage() {
             <span className="text-gray-400 text-sm">Saldo Disponível</span>
           </div>
           <p className="text-3xl font-extrabold text-white mb-3">
-            R$ {(Number(user?.balance) || 0).toFixed(2)}
+            R$ {userBalance.toFixed(2)}
           </p>
           <div className="pt-3 border-t border-[#1a1a1a]">
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Total Ganhos</span>
               <span className="text-[#22c55e] font-semibold">
-                R$ {(Number(user?.totalEarned) || 0).toFixed(2)}
+                R$ {userTotalEarned.toFixed(2)}
               </span>
             </div>
           </div>
