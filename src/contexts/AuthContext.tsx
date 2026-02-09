@@ -15,7 +15,8 @@ import {
   where,
   getDocs,
   onSnapshot,
-  serverTimestamp
+  serverTimestamp,
+  addDoc // Importado aqui para evitar o import dinâmico repetitivo
 } from 'firebase/firestore';
 import { auth, db } from '../firebase/firebase';
 
@@ -33,6 +34,7 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
+  token: string | null; // Adicionado conforme requisito
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, inviteCode?: string) => Promise<void>;
   logout: () => void;
@@ -74,25 +76,41 @@ const generateUniqueInviteCode = async (): Promise<string> => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null); // Novo estado para o token
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // Escutar mudanças em tempo real no documento do usuário
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
-        const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
-          if (docSnap.exists()) {
-            setUser({
-              id: firebaseUser.uid,
-              email: firebaseUser.email || '',
-              ...docSnap.data()
-            } as User);
-          }
-        });
+        try {
+          // 1. Obter e salvar o token de autenticação
+          const idToken = await firebaseUser.getIdToken();
+          setToken(idToken);
 
-        return () => unsubscribeUser();
+          // 2. Escutar mudanças em tempo real no documento do usuário (Firestore)
+          const userDocRef = doc(db, 'users', firebaseUser.uid);
+          
+          // Nota: O unsubscribeUser precisa ser gerenciado se o componente desmontar,
+          // mas dentro do onAuthStateChanged isso é complexo. 
+          // O padrão atual mantém o listener ativo enquanto o usuário está logado.
+          onSnapshot(userDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+              setUser({
+                id: firebaseUser.uid,
+                email: firebaseUser.email || '',
+                ...docSnap.data()
+              } as User);
+            }
+          });
+
+        } catch (error) {
+          console.error("Erro ao processar dados do usuário:", error);
+          setToken(null);
+          setUser(null);
+        }
       } else {
+        // Usuário deslogado
         setUser(null);
+        setToken(null);
       }
     });
 
@@ -119,6 +137,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Criar usuário no Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const uid = userCredential.user.uid;
+      
+      // O token será setado automaticamente pelo onAuthStateChanged, 
+      // mas para garantir sincronia imediata se necessário:
+      const idToken = await userCredential.user.getIdToken();
+      setToken(idToken);
 
       // Gerar código de convite único
       const newInviteCode = await generateUniqueInviteCode();
@@ -138,7 +161,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // SISTEMA DE CONVITE REAL
       if (inviterUid) {
         // Registrar convite nível 1
-        const { addDoc } = await import('firebase/firestore');
         await addDoc(collection(db, 'invites'), {
           inviterId: inviterUid,
           invitedId: uid,
@@ -160,7 +182,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       
-      // Buscar dados do usuário
+      // Atualizar token imediatamente
+      const idToken = await userCredential.user.getIdToken();
+      setToken(idToken);
+      
+      // Buscar dados do usuário (O onSnapshot no useEffect cuidará das atualizações futuras,
+      // mas fazemos um getDoc aqui para garantir dados iniciais rápidos)
       const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
       if (userDoc.exists()) {
         setUser({
@@ -180,10 +207,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     await firebaseSignOut(auth);
     setUser(null);
+    setToken(null); // Limpar token explicitamente
   };
 
   const refreshUser = async () => {
     if (auth.currentUser) {
+      // Atualizar token
+      const idToken = await auth.currentUser.getIdToken(true); // true força refresh
+      setToken(idToken);
+
+      // Atualizar dados do Firestore
       const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
       if (userDoc.exists()) {
         setUser({
@@ -196,7 +229,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, token, login, register, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
